@@ -773,4 +773,272 @@
             // Draw zero line
             ctx.strokeStyle = '#ccc';
             ctx.lineWidth = 1;
-            ctx.begin
+            ctx.beginPath();
+            const zeroY = height / 2;
+            ctx.moveTo(40, zeroY);
+            ctx.lineTo(width - 20, zeroY);
+            ctx.stroke();
+            
+            // Calculate and draw shear force diagram
+            const numPoints = 100;
+            const dx = L / numPoints;
+            const scaleX = (width - 60) / L;
+            const maxShear = Math.max(Math.abs(results.RA), Math.abs(results.RB), Math.abs(results.maxShear));
+            const scaleY = (height - 80) / (2 * maxShear);
+            
+            ctx.strokeStyle = '#1f4e79';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            
+            for (let i = 0; i <= numPoints; i++) {
+                const x = i * dx;
+                let shear = 0;
+                
+                if (support === 'simply') {
+                    shear = results.RA;
+                    
+                    // Subtract loads as we pass them
+                    const loadType = document.getElementById('loadType').value;
+                    const numLoads = parseInt(document.getElementById('numLoads').value);
+                    
+                    for (let j = 1; j <= numLoads; j++) {
+                        if (loadType === 'point') {
+                            const pos = parseFloat(document.getElementById(`load${j}_position`).value || 0);
+                            const P = parseFloat(document.getElementById(`load${j}_magnitude`).value || 0);
+                            if (x > pos) {
+                                shear -= P;
+                            }
+                        } else if (loadType === 'udl') {
+                            const start = parseFloat(document.getElementById(`load${j}_start`).value || 0);
+                            const end = parseFloat(document.getElementById(`load${j}_end`).value || L);
+                            const w = parseFloat(document.getElementById(`load${j}_magnitude`).value || 0);
+                            
+                            if (x > start && x <= end) {
+                                shear -= w * (x - start);
+                            } else if (x > end) {
+                                shear -= w * (end - start);
+                            }
+                        }
+                    }
+                } else if (support === 'cantilever') {
+                    shear = results.RA;
+                    
+                    // For cantilever, loads reduce shear from right to left
+                    const loadType = document.getElementById('loadType').value;
+                    const numLoads = parseInt(document.getElementById('numLoads').value);
+                    
+                    for (let j = 1; j <= numLoads; j++) {
+                        if (loadType === 'point') {
+                            const pos = parseFloat(document.getElementById(`load${j}_position`).value || 0);
+                            const P = parseFloat(document.getElementById(`load${j}_magnitude`).value || 0);
+                            if (x > pos) {
+                                shear -= P;
+                            }
+                        }
+                    }
+                }
+                
+                const canvasX = 40 + x * scaleX;
+                const canvasY = zeroY - shear * scaleY;
+                
+                if (i === 0) {
+                    ctx.moveTo(canvasX, canvasY);
+                } else {
+                    ctx.lineTo(canvasX, canvasY);
+                }
+            }
+            
+            ctx.stroke();
+            
+            // Add labels
+            ctx.fillStyle = '#333';
+            ctx.font = '12px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText('Shear Force (kN)', width / 2, height - 10);
+            ctx.save();
+            ctx.translate(15, height / 2);
+            ctx.rotate(-Math.PI / 2);
+            ctx.fillText('Force', 0, 0);
+            ctx.restore();
+        }
+
+        function drawBMD(results, L, support, loadType) {
+            const canvas = document.getElementById('bmdChart');
+            const ctx = canvas.getContext('2d');
+            const width = canvas.width;
+            const height = canvas.height;
+            
+            // Clear canvas
+            ctx.clearRect(0, 0, width, height);
+            
+            // Draw axes
+            ctx.strokeStyle = '#333';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(40, height - 40);
+            ctx.lineTo(width - 20, height - 40);
+            ctx.moveTo(40, 20);
+            ctx.lineTo(40, height - 40);
+            ctx.stroke();
+            
+            // Draw zero line
+            ctx.strokeStyle = '#ccc';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            const zeroY = height - 40;
+            ctx.moveTo(40, zeroY);
+            ctx.lineTo(width - 20, zeroY);
+            ctx.stroke();
+            
+            // Calculate and draw bending moment diagram
+            const numPoints = 100;
+            const dx = L / numPoints;
+            const scaleX = (width - 60) / L;
+            const maxMoment = Math.max(Math.abs(results.maxMoment), Math.abs(results.MA || 0));
+            const scaleY = (height - 80) / maxMoment;
+            
+            ctx.strokeStyle = '#ff8c00';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            
+            for (let i = 0; i <= numPoints; i++) {
+                const x = i * dx;
+                let moment = 0;
+                
+                if (support === 'simply') {
+                    moment = results.RA * x;
+                    
+                    // Subtract moment contributions from loads
+                    const loadType = document.getElementById('loadType').value;
+                    const numLoads = parseInt(document.getElementById('numLoads').value);
+                    
+                    for (let j = 1; j <= numLoads; j++) {
+                        if (loadType === 'point') {
+                            const pos = parseFloat(document.getElementById(`load${j}_position`).value || 0);
+                            const P = parseFloat(document.getElementById(`load${j}_magnitude`).value || 0);
+                            if (x > pos) {
+                                moment -= P * (x - pos);
+                            }
+                        } else if (loadType === 'udl') {
+                            const start = parseFloat(document.getElementById(`load${j}_start`).value || 0);
+                            const end = parseFloat(document.getElementById(`load${j}_end`).value || L);
+                            const w = parseFloat(document.getElementById(`load${j}_magnitude`).value || 0);
+                            
+                            if (x > start && x <= end) {
+                                moment -= w * (x - start) * (x - start) / 2;
+                            } else if (x > end) {
+                                moment -= w * (end - start) * (x - (start + end) / 2);
+                            }
+                        }
+                    }
+                } else if (support === 'cantilever') {
+                    moment = results.MA;
+                    
+                    // Add moment contributions from loads
+                    const loadType = document.getElementById('loadType').value;
+                    const numLoads = parseInt(document.getElementById('numLoads').value);
+                    
+                    for (let j = 1; j <= numLoads; j++) {
+                        if (loadType === 'point') {
+                            const pos = parseFloat(document.getElementById(`load${j}_position`).value || 0);
+                            const P = parseFloat(document.getElementById(`load${j}_magnitude`).value || 0);
+                            if (x > pos) {
+                                moment += P * (x - pos);
+                            }
+                        }
+                    }
+                }
+                
+                const canvasX = 40 + x * scaleX;
+                const canvasY = zeroY - moment * scaleY;
+                
+                if (i === 0) {
+                    ctx.moveTo(canvasX, canvasY);
+                } else {
+                    ctx.lineTo(canvasX, canvasY);
+                }
+            }
+            
+            ctx.stroke();
+            
+            // Highlight maximum moment point
+            if (results.maxMoment > 0) {
+                ctx.fillStyle = '#ff0000';
+                ctx.beginPath();
+                const maxX = 40 + results.maxMomentPos * scaleX;
+                const maxY = zeroY - results.maxMoment * scaleY;
+                ctx.arc(maxX, maxY, 4, 0, 2 * Math.PI);
+                ctx.fill();
+                
+                // Label maximum moment
+                ctx.fillStyle = '#333';
+                ctx.font = '10px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText(`Max: ${results.maxMoment.toFixed(1)} kN⋅m`, maxX, maxY - 10);
+            }
+            
+            // Add labels
+            ctx.fillStyle = '#333';
+            ctx.font = '12px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText('Bending Moment (kN⋅m)', width / 2, height - 10);
+            ctx.save();
+            ctx.translate(15, height / 2);
+            ctx.rotate(-Math.PI / 2);
+            ctx.fillText('Moment', 0, 0);
+            ctx.restore();
+        }
+
+        // Add event listeners for real-time updates
+        document.addEventListener('input', function(e) {
+            if (e.target.type === 'number' || e.target.tagName === 'SELECT') {
+                setTimeout(() => {
+                    calculateBeam();
+                }, 100);
+            }
+        });
+
+        // Add professional tips tooltip
+        function showTips() {
+            alert(`🎯 PROFESSIONAL TIPS FOR BEAM ANALYSIS:
+
+📐 Design Guidelines:
+• Maximum deflection should be ≤ L/250 for general structures
+• For cantilevers, use L/125 for deflection limits
+• Safety factor should be ≥ 2.0 for structural design
+
+📊 SFD & BMD Rules:
+• SFD jumps at point loads (discontinuous)
+• BMD is continuous but slope changes at point loads
+• Maximum moment occurs where shear force = 0
+• Under UDL, SFD is linear and BMD is parabolic
+
+🔧 Load Types:
+• Point Load: Concentrated force at specific position
+• UDL: Uniform load distributed over length
+• Triangular Load: Varies linearly along span
+
+⚡ Quick Checks:
+• Sum of upward reactions = Sum of downward loads
+• Sum of moments about any point = 0
+• Maximum stress = M/Z (where Z is section modulus)`);
+        }
+
+        // Add tips button
+        document.querySelector('.header').innerHTML += `
+            <button onclick="showTips()" style="
+                position: absolute;
+                top: 20px;
+                right: 20px;
+                background: rgba(255,255,255,0.2);
+                color: white;
+                border: 1px solid rgba(255,255,255,0.3);
+                padding: 10px 15px;
+                border-radius: 5px;
+                cursor: pointer;
+                font-size: 14px;
+            ">💡 Tips</button>
+        `;
+    </script>
+</body>
+</html>
