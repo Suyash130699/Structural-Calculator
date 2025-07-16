@@ -1,0 +1,776 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Structural Beam Analysis Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #1f4e79 0%, #2c5aa0 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grid" width="10" height="10" patternUnits="userSpaceOnUse"><path d="M 10 0 L 0 0 0 10" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="0.5"/></pattern></defs><rect width="100" height="100" fill="url(%23grid)" /></svg>');
+            opacity: 0.3;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .header p {
+            font-size: 1.2rem;
+            opacity: 0.9;
+            position: relative;
+            z-index: 1;
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            padding: 30px;
+        }
+
+        .panel {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+            border: 1px solid #e9ecef;
+        }
+
+        .panel h2 {
+            color: #1f4e79;
+            margin-bottom: 20px;
+            font-size: 1.4rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .panel h2::before {
+            content: '';
+            width: 4px;
+            height: 20px;
+            background: #ff8c00;
+            border-radius: 2px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #495057;
+        }
+
+        input, select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        input:focus, select:focus {
+            outline: none;
+            border-color: #1f4e79;
+            box-shadow: 0 0 0 3px rgba(31, 78, 121, 0.1);
+        }
+
+        .load-inputs {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 15px;
+            border: 1px solid #dee2e6;
+        }
+
+        .results-panel {
+            grid-column: 1 / -1;
+            background: linear-gradient(135deg, #4caf50 0%, #45a049 100%);
+            color: white;
+        }
+
+        .results-panel h2 {
+            color: white;
+        }
+
+        .results-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .result-card {
+            background: rgba(255,255,255,0.1);
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .result-value {
+            font-size: 2rem;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .result-label {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+
+        .beam-diagram {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 20px;
+            min-height: 200px;
+            border: 1px solid #dee2e6;
+        }
+
+        .chart-container {
+            grid-column: 1 / -1;
+            margin-top: 20px;
+        }
+
+        .chart-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .chart-panel {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            border: 1px solid #dee2e6;
+        }
+
+        .chart-title {
+            font-size: 1.2rem;
+            font-weight: bold;
+            margin-bottom: 15px;
+            color: #1f4e79;
+            text-align: center;
+        }
+
+        .warning {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 15px;
+            color: #856404;
+        }
+
+        .safety-check {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+        }
+
+        .safety-pass {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .safety-fail {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .beam-visual {
+            width: 100%;
+            height: 150px;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            background: #f8f9fa;
+        }
+
+        .calculate-btn {
+            background: linear-gradient(135deg, #ff8c00 0%, #ff7300 100%);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            width: 100%;
+            margin-top: 20px;
+        }
+
+        .calculate-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(255,140,0,0.3);
+        }
+
+        @media (max-width: 768px) {
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+                gap: 20px;
+                padding: 20px;
+            }
+            
+            .chart-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🏗️ Structural Beam Analysis Dashboard</h1>
+            <p>Professional Engineering Tool for Beam Design & Analysis</p>
+        </div>
+
+        <div class="dashboard-grid">
+            <div class="panel">
+                <h2>Beam Properties</h2>
+                <div class="form-group">
+                    <div class="form-row">
+                        <div>
+                            <label for="length">Length (L) [m]:</label>
+                            <input type="number" id="length" value="6" step="0.1" min="0.1">
+                        </div>
+                        <div>
+                            <label for="support">Support Type:</label>
+                            <select id="support">
+                                <option value="simply">Simply Supported</option>
+                                <option value="cantilever">Cantilever</option>
+                                <option value="fixed">Fixed-Fixed</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div>
+                            <label for="modulus">Elastic Modulus (E) [GPa]:</label>
+                            <input type="number" id="modulus" value="200" step="1">
+                        </div>
+                        <div>
+                            <label for="inertia">Moment of Inertia (I) [×10⁶ mm⁴]:</label>
+                            <input type="number" id="inertia" value="50" step="0.1">
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="beam-visual">
+                    <canvas id="beamCanvas" width="400" height="120"></canvas>
+                </div>
+            </div>
+
+            <div class="panel">
+                <h2>Load Configuration</h2>
+                <div class="form-group">
+                    <div class="form-row">
+                        <div>
+                            <label for="loadType">Load Type:</label>
+                            <select id="loadType" onchange="updateLoadInputs()">
+                                <option value="point">Point Load</option>
+                                <option value="udl">Uniformly Distributed Load</option>
+                                <option value="moment">Applied Moment</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="numLoads">Number of Loads:</label>
+                            <select id="numLoads" onchange="updateLoadInputs()">
+                                <option value="1">1</option>
+                                <option value="2">2</option>
+                                <option value="3">3</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="load-inputs" id="loadInputs">
+                    <!-- Load inputs will be generated here -->
+                </div>
+
+                <button class="calculate-btn" onclick="calculateBeam()">
+                    🔧 Calculate Beam Analysis
+                </button>
+            </div>
+
+            <div class="results-panel">
+                <h2>Analysis Results</h2>
+                <div class="results-grid" id="resultsGrid">
+                    <!-- Results will be displayed here -->
+                </div>
+                
+                <div class="beam-diagram">
+                    <h3 style="color: #1f4e79; margin-bottom: 15px;">Safety Checks</h3>
+                    <div id="safetyChecks">
+                        <!-- Safety checks will be displayed here -->
+                    </div>
+                </div>
+            </div>
+
+            <div class="chart-container">
+                <div class="chart-grid">
+                    <div class="chart-panel">
+                        <div class="chart-title">Shear Force Diagram (SFD)</div>
+                        <canvas id="sfdChart" width="400" height="200"></canvas>
+                    </div>
+                    <div class="chart-panel">
+                        <div class="chart-title">Bending Moment Diagram (BMD)</div>
+                        <canvas id="bmdChart" width="400" height="200"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Initialize the dashboard
+        updateLoadInputs();
+        drawBeamDiagram();
+        calculateBeam();
+
+        function updateLoadInputs() {
+            const loadType = document.getElementById('loadType').value;
+            const numLoads = parseInt(document.getElementById('numLoads').value);
+            const container = document.getElementById('loadInputs');
+            
+            let html = '';
+            
+            for (let i = 1; i <= numLoads; i++) {
+                html += `<div style="margin-bottom: 15px; padding: 15px; background: #f8f9fa; border-radius: 8px;">`;
+                html += `<h4 style="margin-bottom: 10px; color: #1f4e79;">Load ${i}</h4>`;
+                
+                if (loadType === 'point') {
+                    html += `
+                        <div class="form-row">
+                            <div>
+                                <label>Force (P) [kN]:</label>
+                                <input type="number" id="load${i}_magnitude" value="${i === 1 ? 50 : 30}" step="0.1">
+                            </div>
+                            <div>
+                                <label>Position (a) [m]:</label>
+                                <input type="number" id="load${i}_position" value="${i * 2}" step="0.1" min="0">
+                            </div>
+                        </div>
+                    `;
+                } else if (loadType === 'udl') {
+                    html += `
+                        <div class="form-row">
+                            <div>
+                                <label>Load (w) [kN/m]:</label>
+                                <input type="number" id="load${i}_magnitude" value="${i === 1 ? 20 : 15}" step="0.1">
+                            </div>
+                            <div>
+                                <label>Start Position [m]:</label>
+                                <input type="number" id="load${i}_start" value="0" step="0.1" min="0">
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div>
+                                <label>End Position [m]:</label>
+                                <input type="number" id="load${i}_end" value="6" step="0.1" min="0">
+                            </div>
+                            <div></div>
+                        </div>
+                    `;
+                } else if (loadType === 'moment') {
+                    html += `
+                        <div class="form-row">
+                            <div>
+                                <label>Moment (M) [kN⋅m]:</label>
+                                <input type="number" id="load${i}_magnitude" value="${i === 1 ? 100 : 60}" step="0.1">
+                            </div>
+                            <div>
+                                <label>Position [m]:</label>
+                                <input type="number" id="load${i}_position" value="${i * 2}" step="0.1" min="0">
+                            </div>
+                        </div>
+                    `;
+                }
+                
+                html += `</div>`;
+            }
+            
+            container.innerHTML = html;
+        }
+
+        function calculateBeam() {
+            const L = parseFloat(document.getElementById('length').value);
+            const support = document.getElementById('support').value;
+            const E = parseFloat(document.getElementById('modulus').value) * 1e9; // Convert GPa to Pa
+            const I = parseFloat(document.getElementById('inertia').value) * 1e-6; // Convert to m⁴
+            const loadType = document.getElementById('loadType').value;
+            const numLoads = parseInt(document.getElementById('numLoads').value);
+            
+            let results = {
+                RA: 0,
+                RB: 0,
+                MA: 0,
+                MB: 0,
+                maxMoment: 0,
+                maxMomentPos: 0,
+                maxShear: 0,
+                maxDeflection: 0,
+                maxDeflectionPos: 0
+            };
+
+            // Calculate reactions based on load type and support conditions
+            if (support === 'simply') {
+                if (loadType === 'point') {
+                    for (let i = 1; i <= numLoads; i++) {
+                        const P = parseFloat(document.getElementById(`load${i}_magnitude`).value);
+                        const a = parseFloat(document.getElementById(`load${i}_position`).value);
+                        const b = L - a;
+                        
+                        results.RA += P * b / L;
+                        results.RB += P * a / L;
+                    }
+                } else if (loadType === 'udl') {
+                    for (let i = 1; i <= numLoads; i++) {
+                        const w = parseFloat(document.getElementById(`load${i}_magnitude`).value);
+                        const start = parseFloat(document.getElementById(`load${i}_start`).value);
+                        const end = parseFloat(document.getElementById(`load${i}_end`).value);
+                        const loadLength = end - start;
+                        const centerPos = start + loadLength / 2;
+                        const totalLoad = w * loadLength;
+                        
+                        results.RA += totalLoad * (L - centerPos) / L;
+                        results.RB += totalLoad * centerPos / L;
+                    }
+                }
+            } else if (support === 'cantilever') {
+                if (loadType === 'point') {
+                    for (let i = 1; i <= numLoads; i++) {
+                        const P = parseFloat(document.getElementById(`load${i}_magnitude`).value);
+                        const a = parseFloat(document.getElementById(`load${i}_position`).value);
+                        
+                        results.RA += P;
+                        results.MA += P * a;
+                    }
+                } else if (loadType === 'udl') {
+                    for (let i = 1; i <= numLoads; i++) {
+                        const w = parseFloat(document.getElementById(`load${i}_magnitude`).value);
+                        const start = parseFloat(document.getElementById(`load${i}_start`).value);
+                        const end = parseFloat(document.getElementById(`load${i}_end`).value);
+                        const loadLength = end - start;
+                        const centerPos = start + loadLength / 2;
+                        const totalLoad = w * loadLength;
+                        
+                        results.RA += totalLoad;
+                        results.MA += totalLoad * centerPos;
+                    }
+                }
+            }
+
+            // Calculate maximum moments and deflections
+            if (support === 'simply' && loadType === 'point' && numLoads === 1) {
+                const P = parseFloat(document.getElementById('load1_magnitude').value);
+                const a = parseFloat(document.getElementById('load1_position').value);
+                const b = L - a;
+                
+                results.maxMoment = P * a * b / L;
+                results.maxMomentPos = a;
+                results.maxShear = Math.max(results.RA, results.RB);
+                results.maxDeflection = P * a * b * Math.sqrt(3) * (L * L - a * a - b * b) / (27 * E * I * L) * 1000; // Convert to mm
+                results.maxDeflectionPos = Math.sqrt(a * a + a * b + b * b) / Math.sqrt(3);
+            } else if (support === 'simply' && loadType === 'udl' && numLoads === 1) {
+                const w = parseFloat(document.getElementById('load1_magnitude').value);
+                const start = parseFloat(document.getElementById('load1_start').value);
+                const end = parseFloat(document.getElementById('load1_end').value);
+                
+                if (start === 0 && end === L) {
+                    results.maxMoment = w * L * L / 8;
+                    results.maxMomentPos = L / 2;
+                    results.maxShear = w * L / 2;
+                    results.maxDeflection = 5 * w * Math.pow(L, 4) / (384 * E * I) * 1000;
+                    results.maxDeflectionPos = L / 2;
+                }
+            } else if (support === 'cantilever' && loadType === 'point' && numLoads === 1) {
+                const P = parseFloat(document.getElementById('load1_magnitude').value);
+                const a = parseFloat(document.getElementById('load1_position').value);
+                
+                results.maxMoment = P * a;
+                results.maxMomentPos = 0;
+                results.maxShear = P;
+                results.maxDeflection = P * a * a * (3 * L - a) / (6 * E * I) * 1000;
+                results.maxDeflectionPos = L;
+            }
+
+            displayResults(results);
+            drawCharts(results, L, support, loadType);
+            drawBeamDiagram();
+        }
+
+        function displayResults(results) {
+            const container = document.getElementById('resultsGrid');
+            const support = document.getElementById('support').value;
+            
+            let html = '';
+            
+            if (support === 'simply') {
+                html += `
+                    <div class="result-card">
+                        <div class="result-value">${results.RA.toFixed(2)}</div>
+                        <div class="result-label">Left Reaction (RA) [kN]</div>
+                    </div>
+                    <div class="result-card">
+                        <div class="result-value">${results.RB.toFixed(2)}</div>
+                        <div class="result-label">Right Reaction (RB) [kN]</div>
+                    </div>
+                `;
+            } else if (support === 'cantilever') {
+                html += `
+                    <div class="result-card">
+                        <div class="result-value">${results.RA.toFixed(2)}</div>
+                        <div class="result-label">Reaction Force (RA) [kN]</div>
+                    </div>
+                    <div class="result-card">
+                        <div class="result-value">${results.MA.toFixed(2)}</div>
+                        <div class="result-label">Reaction Moment (MA) [kN⋅m]</div>
+                    </div>
+                `;
+            }
+            
+            html += `
+                <div class="result-card">
+                    <div class="result-value">${results.maxMoment.toFixed(2)}</div>
+                    <div class="result-label">Max Moment [kN⋅m]</div>
+                </div>
+                <div class="result-card">
+                    <div class="result-value">${results.maxShear.toFixed(2)}</div>
+                    <div class="result-label">Max Shear [kN]</div>
+                </div>
+                <div class="result-card">
+                    <div class="result-value">${results.maxDeflection.toFixed(2)}</div>
+                    <div class="result-label">Max Deflection [mm]</div>
+                </div>
+                <div class="result-card">
+                    <div class="result-value">${results.maxDeflectionPos.toFixed(2)}</div>
+                    <div class="result-label">Deflection Position [m]</div>
+                </div>
+            `;
+            
+            container.innerHTML = html;
+            
+            // Safety checks
+            displaySafetyChecks(results);
+        }
+
+        function displaySafetyChecks(results) {
+            const container = document.getElementById('safetyChecks');
+            const L = parseFloat(document.getElementById('length').value);
+            
+            const allowableDeflection = L * 1000 / 250; // L/250 in mm
+            const deflectionCheck = results.maxDeflection <= allowableDeflection;
+            
+            let html = `
+                <div class="safety-check ${deflectionCheck ? 'safety-pass' : 'safety-fail'}">
+                    <span>Deflection Check: ${results.maxDeflection.toFixed(2)} mm ≤ ${allowableDeflection.toFixed(2)} mm (L/250)</span>
+                    <span>${deflectionCheck ? '✅ PASS' : '❌ FAIL'}</span>
+                </div>
+            `;
+            
+            // Add stress check (simplified)
+            const assumedSectionModulus = 500000; // mm³
+            const maxStress = results.maxMoment * 1000000 / assumedSectionModulus; // N/mm²
+            const allowableStress = 250; // N/mm² for mild steel
+            const stressCheck = maxStress <= allowableStress;
+            
+            html += `
+                <div class="safety-check ${stressCheck ? 'safety-pass' : 'safety-fail'}">
+                    <span>Stress Check: ${maxStress.toFixed(2)} MPa ≤ ${allowableStress} MPa</span>
+                    <span>${stressCheck ? '✅ PASS' : '❌ FAIL'}</span>
+                </div>
+            `;
+            
+            container.innerHTML = html;
+        }
+
+        function drawBeamDiagram() {
+            const canvas = document.getElementById('beamCanvas');
+            const ctx = canvas.getContext('2d');
+            const L = parseFloat(document.getElementById('length').value);
+            const support = document.getElementById('support').value;
+            
+            // Clear canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw beam
+            ctx.strokeStyle = '#1f4e79';
+            ctx.lineWidth = 8;
+            ctx.beginPath();
+            ctx.moveTo(50, 60);
+            ctx.lineTo(350, 60);
+            ctx.stroke();
+            
+            // Draw supports
+            ctx.strokeStyle = '#ff8c00';
+            ctx.lineWidth = 3;
+            
+            if (support === 'simply') {
+                // Left support (pin)
+                ctx.beginPath();
+                ctx.arc(50, 60, 8, 0, 2 * Math.PI);
+                ctx.stroke();
+                
+                // Right support (roller)
+                ctx.beginPath();
+                ctx.rect(342, 52, 16, 16);
+                ctx.stroke();
+            } else if (support === 'cantilever') {
+                // Fixed support
+                ctx.fillStyle = '#ff8c00';
+                ctx.fillRect(40, 45, 20, 30);
+            }
+            
+            // Draw loads
+            const loadType = document.getElementById('loadType').value;
+            const numLoads = parseInt(document.getElementById('numLoads').value);
+            
+            ctx.strokeStyle = '#ff0000';
+            ctx.lineWidth = 2;
+            
+            for (let i = 1; i <= numLoads; i++) {
+                if (loadType === 'point') {
+                    const pos = parseFloat(document.getElementById(`load${i}_position`).value || 0);
+                    const x = 50 + (pos / L) * 300;
+                    
+                    // Draw arrow
+                    ctx.beginPath();
+                    ctx.moveTo(x, 20);
+                    ctx.lineTo(x, 55);
+                    ctx.moveTo(x - 5, 50);
+                    ctx.lineTo(x, 55);
+                    ctx.lineTo(x + 5, 50);
+                    ctx.stroke();
+                    
+                    // Label
+                    ctx.fillStyle = '#000';
+                    ctx.font = '12px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(`P${i}`, x, 15);
+                } else if (loadType === 'udl') {
+                    const start = parseFloat(document.getElementById(`load${i}_start`).value || 0);
+                    const end = parseFloat(document.getElementById(`load${i}_end`).value || L);
+                    const startX = 50 + (start / L) * 300;
+                    const endX = 50 + (end / L) * 300;
+                    
+                    // Draw distributed load
+                    for (let x = startX; x <= endX; x += 10) {
+                        ctx.beginPath();
+                        ctx.moveTo(x, 20);
+                        ctx.lineTo(x, 55);
+                        ctx.moveTo(x - 3, 50);
+                        ctx.lineTo(x, 55);
+                        ctx.lineTo(x + 3, 50);
+                        ctx.stroke();
+                    }
+                    
+                    // Label
+                    ctx.fillStyle = '#000';
+                    ctx.font = '12px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(`w${i}`, (startX + endX) / 2, 15);
+                }
+            }
+            
+            // Draw dimensions
+            ctx.strokeStyle = '#666';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(50, 90);
+            ctx.lineTo(350, 90);
+            ctx.moveTo(50, 85);
+            ctx.lineTo(50, 95);
+            ctx.moveTo(350, 85);
+            ctx.lineTo(350, 95);
+            ctx.stroke();
+            
+            ctx.fillStyle = '#666';
+            ctx.font = '12px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText(`L = ${L}m`, 200, 105);
+        }
+
+        function drawCharts(results, L, support, loadType) {
+            drawSFD(results, L, support, loadType);
+            drawBMD(results, L, support, loadType);
+        }
+
+        function drawSFD(results, L, support, loadType) {
+            const canvas = document.getElementById('sfdChart');
+            const ctx = canvas.getContext('2d');
+            const width = canvas.width;
+            const height = canvas.height;
+            
+            // Clear canvas
+            ctx.clearRect(0, 0, width, height);
+            
+            // Draw axes
+            ctx.strokeStyle = '#333';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(40, height - 40);
+            ctx.lineTo(width - 20, height - 40);
+            ctx.moveTo(40, 20);
+            ctx.lineTo(40, height - 40);
+            ctx.stroke();
+            
+            // Draw zero line
+            ctx.strokeStyle = '#ccc';
+            ctx.lineWidth = 1;
+            ctx.begin
